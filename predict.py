@@ -1,4 +1,5 @@
 import joblib
+import numpy as np
 
 from src.preprocess import preprocess_text
 from src.feature import create_features
@@ -9,53 +10,39 @@ class SpamDetector:
     def __init__(self):
 
         self.model = joblib.load("model/model.pkl")
+        self.dictionary = joblib.load("model/dictionary.pkl")
+        self.encoder = joblib.load("model/encoder.pkl")
 
-        self.word_index = joblib.load(
-            "model/word_index.pkl"
-        )
-
-        self.encoder = joblib.load(
-            "model/encoder.pkl"
-        )
 
     def predict(self, text):
 
         tokens = preprocess_text(text)
 
-        x = create_features(
-            tokens,
-            self.word_index
-        )
+        features = create_features(tokens, self.dictionary)
 
-        x = x.reshape(1, -1)
+        features = np.array(features).reshape(1, -1)
 
-        prediction = self.model.predict(x)[0]
+        prediction = self.model.predict(features)
 
-        label = self.encoder.inverse_transform(
-            [prediction]
-        )[0]
+        label = self.encoder.inverse_transform(prediction)[0]
 
         return label
+
 
     def predict_probability(self, text):
 
         tokens = preprocess_text(text)
 
-        x = create_features(
-            tokens,
-            self.word_index
-        )
+        features = create_features(tokens, self.dictionary)
 
-        x = x.reshape(1, -1)
+        features = np.array(features).reshape(1, -1)
 
-        probs = self.model.predict_proba(x)[0]
+        prediction = self.model.predict(features)
 
-        prediction = probs.argmax()
+        probability = self.model.predict_proba(features)
 
-        confidence = probs[prediction]
+        label = self.encoder.inverse_transform(prediction)[0]
 
-        label = self.encoder.inverse_transform(
-            [prediction]
-        )[0]
+        confidence = np.max(probability)
 
         return label, confidence
